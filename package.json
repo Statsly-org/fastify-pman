@@ -1,0 +1,55 @@
+{
+  "name": "@st3ix/pman",
+  "version": "1.0.0",
+  "description": "Sync Fastify route schemas to Postman via OpenAPI and the Postman API.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "pman": "./bin/pman.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node --input-type=module --eval \"import { rmSync } from 'node:fs'; try { rmSync('dist', { recursive: true, force: true }); } catch {}\"",
+    "prepack": "npm run build",
+    "test": "npm run build && node --test \"test/*.test.js\"",
+    "dev:example": "npm run build && node --env-file=.env examples/playground.mjs"
+  },
+  "keywords": [
+    "fastify",
+    "fastify-plugin",
+    "postman",
+    "openapi",
+    "sync",
+    "openapi-to-postman"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@fastify/swagger": "^9.0.0",
+    "fastify": "^5.0.0"
+  },
+  "dependencies": {
+    "fastify-plugin": "^5.0.0",
+    "openapi-to-postmanv2": "^6.0.0"
+  },
+  "devDependencies": {
+    "@fastify/swagger": "^9.7.0",
+    "@types/node": "^22.0.0",
+    "fastify": "^5.0.0",
+    "pino-pretty": "^13.0.0",
+    "typescript": "^5.7.0",
+    "undici": "^7.0.0"
+  }
+}

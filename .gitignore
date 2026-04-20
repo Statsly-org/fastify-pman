@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+
+# Logs & caches
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.npm/
+.eslintcache
+.prettiercache
+*.tsbuildinfo
+
+# Build / output
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+
+# Local things
+docs/
+
+# pman sync state
+.postman-sync.json
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors & IDEs
+.cursor/
+.idea/
+.vscode/
+*.code-workspace
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+*.sw?
+*~
+
+# JetBrains / generic IDE markers
+*.iml
+*.ipr
+*.iws
+.ide/
+
+
+.turbo/
+.vercel/
