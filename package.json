@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "pman": "./bin/pman.js"
+    "pman": "bin/pman.js"
   },
   "files": [
     "dist"
@@ -33,6 +33,18 @@
     "sync",
     "openapi-to-postman"
   ],
+  "homepage": "https://github.com/Statsly-org/fastify-pman#readme",
+  "bugs": {
+    "url": "https://github.com/Statsly-org/fastify-pman/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Statsly-org/fastify-pman.git"
+  },
+  "author": "St3ix (https://st3ix.net/)",
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=20"
