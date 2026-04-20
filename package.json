@@ -21,7 +21,8 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "node --input-type=module --eval \"import { rmSync } from 'node:fs'; try { rmSync('dist', { recursive: true, force: true }); } catch {}\"",
     "prepack": "npm run build",
-    "test": "npm run build && node --test \"test/*.test.js\"",
+    "lint": "eslint .",
+    "test": "npm run build && node --test",
     "dev:example": "npm run build && node --env-file=.env examples/playground.mjs"
   },
   "keywords": [
@@ -47,8 +48,12 @@
   "devDependencies": {
     "@fastify/swagger": "^9.7.0",
     "@types/node": "^22.0.0",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-n": "^17.0.0",
     "fastify": "^5.0.0",
     "pino-pretty": "^13.0.0",
+    "typescript-eslint": "^8.0.0",
     "typescript": "^5.7.0",
     "undici": "^7.0.0"
   }
