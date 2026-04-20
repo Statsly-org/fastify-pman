@@ -23,12 +23,18 @@ jobs:
           registry-url: https://registry.npmjs.org/
           cache: npm
 
+      - name: Toolchain
+        run: |
+          node -v
+          npm -v
+          npm config get registry
+
+      - name: Upgrade npm (trusted publishing support)
+        run: npm install -g npm@11.5.1
+
       - run: npm ci
       - run: npm run lint
       - run: npm test
-
-      - name: npm whoami (debug)
-        run: npm whoami
 
       - name: Publish
         run: npm publish --access public --provenance
