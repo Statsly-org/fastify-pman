@@ -4,6 +4,8 @@ export type FolderStrategy = 'path' | 'tags' | 'hybrid';
 
 export type FastifyPmanOptions = {
   workspaceId?: string;
+  /** Optional Postman workspace URL. If set, the workspace id is extracted automatically. */
+  workspaceLink?: string;
   collectionName?: string;
   statePath?: string;
   dryRun?: boolean;
@@ -58,6 +60,36 @@ function firstNonEmpty(...candidates: (string | undefined)[]): string | undefine
   return undefined;
 }
 
+function wspacelink(link: string | undefined): string | undefined {
+  if (typeof link !== 'string') return undefined;
+  const raw = link.trim();
+  if (!raw) return undefined;
+
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return undefined;
+  }
+
+  const parts = u.pathname.split('/').filter(Boolean);
+  const i = parts.indexOf('workspace');
+  if (i < 0) return undefined;
+  const seg = parts[i + 1];
+  if (typeof seg !== 'string' || seg.length === 0) return undefined;
+
+  // Typical format: "<name>~<uuid>"
+  const afterTilde = seg.includes('~') ? seg.split('~').pop() : seg;
+  const id = (afterTilde ?? '').trim();
+  if (!id) return undefined;
+
+  // Very small sanity check: UUID-ish.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return undefined;
+  }
+  return id;
+}
+
 export function resolvePmanOptions(opts: FastifyPmanOptions): ResolvedPmanOptions {
   const auth =
     opts.auth && typeof opts.auth === 'object'
@@ -73,8 +105,10 @@ export function resolvePmanOptions(opts: FastifyPmanOptions): ResolvedPmanOption
         }
       : null;
 
+  const extractedWorkspaceId = wspacelink(opts.workspaceLink);
+
   return {
-    workspaceId: firstNonEmpty(opts.workspaceId, process.env.POSTMAN_WORKSPACE_ID),
+    workspaceId: firstNonEmpty(opts.workspaceId, extractedWorkspaceId, process.env.POSTMAN_WORKSPACE_ID),
     collectionName: opts.collectionName?.trim() || 'Fastify (pman)',
     statePath: opts.statePath ?? `${process.cwd()}/.postman-sync.json`,
     dryRun: opts.dryRun ?? false,
