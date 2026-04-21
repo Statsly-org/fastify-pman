@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { unlink } from 'node:fs/promises';
 
+const SUPPORT_DISCORD_URL = 'https://discord.gg/4FBYAMxwdk';
+
 const cmd = process.argv[2];
 const statePath = process.argv.includes('--state')
   ? process.argv[process.argv.indexOf('--state') + 1]
@@ -11,6 +13,10 @@ if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
 
 Commands:
   pman clear [--state <path>]   Deletes the local sync state file (default .postman-sync.json)
+  pman support                  Prints the Discord support invite
+
+Support:
+  ${SUPPORT_DISCORD_URL}
 `);
   process.exit(0);
 }
@@ -29,6 +35,11 @@ if (cmd === 'clear') {
     process.stderr.write(String(e) + '\n');
     process.exit(1);
   }
+  process.exit(0);
+}
+
+if (cmd === 'support') {
+  process.stdout.write(`${SUPPORT_DISCORD_URL}\n`);
   process.exit(0);
 }
 
