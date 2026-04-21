@@ -112,6 +112,18 @@ Requests managed by this plugin are tagged with `_pman.routeId`. On each sync, s
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## CLI
+
+The package ships a small `pman` CLI:
+
+```bash
+pman help
+pman clear
+pman support
+```
+
+`pman support` prints the Discord invite: `https://discord.gg/4FBYAMxwdk`.
+
 ## License
 
 MIT
