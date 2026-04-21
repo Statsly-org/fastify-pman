@@ -43,7 +43,10 @@ app.get('/users', {
 
 await app.register(pman, {
   postmanApiKey: 'PMAK-…',
+  // Either pass workspaceId directly...
   workspaceId: '00000000-0000-4000-8000-000000000000',
+  // ...or pass a workspace link and let pman extract the id:
+  // workspaceLink: 'https://<team>.postman.co/workspace/My~00000000-0000-4000-8000-000000000000/overview',
   postmanBaseUrl: 'http://127.0.0.1:3000',
   collectionName: 'My API',
   folderStrategy: 'path',
@@ -77,6 +80,7 @@ Secrets are never written to the sync state file.
 | Option | Description |
 |--------|-------------|
 | `workspaceId` | Postman workspace id |
+| `workspaceLink` | Postman workspace link (extracts `workspaceId` automatically) |
 | `postmanApiKey` | Postman API key |
 | `postmanBaseUrl` | Value for Postman variable `baseUrl` (`{{baseUrl}}` in URLs) |
 | `reuseExistingCollectionByName` | Reuse workspace collection with same name when no state file (default `true`) |
