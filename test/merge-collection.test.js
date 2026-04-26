@@ -42,6 +42,7 @@ test('merge preserves events and marks _pman', () => {
       method: 'GET',
       path: '/users',
       tags: [],
+      name: undefined,
       summary: 'List users',
       folder: 'Users',
     },
@@ -52,4 +53,54 @@ test('merge preserves events and marks _pman', () => {
   assert.match(flat, /listUsers/);
   assert.match(flat, /pm\.test/);
   assert.match(flat, /"X"/);
+  assert.match(flat, /"name":"GET users"/);
+  assert.match(flat, /"description":"List users/);
+  assert.match(flat, /`GET \/users`/);
+});
+
+test('merge uses pman display name; summary leads docs', () => {
+  const existing = shellCollection('API');
+  existing.item = [
+    {
+      name: 'Company',
+      item: [
+        {
+          name: 'old',
+          request: { method: 'POST', url: { path: ['invites', 'accept'] } },
+          _pman: { routeId: 'acceptInvite' },
+        },
+      ],
+    },
+  ];
+
+  const generated = shellCollection('gen');
+  generated.item = [
+    {
+      name: 'Company',
+      item: [
+        {
+          name: 'Long summary title from converter',
+          request: { method: 'POST', url: { path: ['invites', 'accept'] } },
+        },
+      ],
+    },
+  ];
+
+  const routes = [
+    {
+      routeId: 'acceptInvite',
+      routeKey: 'POST /invites/accept',
+      method: 'POST',
+      path: '/invites/accept',
+      tags: ['Company'],
+      name: 'Accept invite',
+      summary: 'Accept organization invitation; invitee only',
+      folder: 'Company',
+    },
+  ];
+
+  const merged = mergeOpenApiIntoPostmanCollection({ existing, generated, routes });
+  const flat = JSON.stringify(merged);
+  assert.match(flat, /"name":"Accept invite"/);
+  assert.match(flat, /Accept organization invitation; invitee only/);
 });

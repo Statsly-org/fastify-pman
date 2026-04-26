@@ -35,15 +35,21 @@ await app.register(swagger, {
 
 app.get('/users', {
   schema: {
+    // Short Postman item title. Use an OpenAPI extension field because
+    // plain `name` is not emitted into OpenAPI by @fastify/swagger.
+    'x-pman-name': 'List users',
     tags: ['Users'],
-    summary: 'List users',
+    summary: 'List users in the current workspace',
     response: { 200: { type: 'array' } },
   },
 }, async () => []);
 
 await app.register(pman, {
   postmanApiKey: 'PMAK-…',
-  workspaceId: '00000000-0000-4000-8000-000000000000',
+  // Either pass workspaceId directly...
+  // workspaceId: '00000000-0000-4000-8000-000000000000',
+  // ...or pass a workspace link and let pman extract the id:
+  workspaceLink: 'https://<team>.postman.co/workspace/My~00000000-0000-4000-8000-000000000000/overview',
   postmanBaseUrl: 'http://127.0.0.1:3000',
   collectionName: 'My API',
   folderStrategy: 'path',
@@ -53,6 +59,24 @@ await app.register(pman, {
 
 await app.listen({ port: 3000 });
 ```
+
+### Postman item titles and docs
+
+OpenAPI `summary` strings are often long, but they make poor Postman request titles. Set a short **OpenAPI extension** on the operation to control the Postman item name:
+
+- `schema['x-pman-name']` (recommended)
+- `schema['x-name']` (also supported)
+
+Use `summary` for the first paragraph of the generated Postman “Docs” text.
+
+Postman stores request documentation on the **request** (`item.request.description`) in Collection v2.1; pman writes the same text to `item.description` as well for compatibility.
+
+| Route schema field | How it is used in Postman |
+|--------------------|---------------------------|
+| `x-pman-name` / `x-name` | Request title (short) |
+| `summary` | First paragraph in the item description, followed by auto-generated route metadata |
+
+If `x-pman-name` / `x-name` is omitted, the title falls back to `METHOD <lastPathSegment>` (for example `GET users`).
 
 Pass **`postmanApiKey`** and **`workspaceId`** in the same object as the rest of the plugin options (recommended for apps you control). If either value is omitted or an empty string, the plugin falls back to `POSTMAN_API_KEY` / `POSTMAN_WORKSPACE_ID`.
 
@@ -77,6 +101,7 @@ Secrets are never written to the sync state file.
 | Option | Description |
 |--------|-------------|
 | `workspaceId` | Postman workspace id |
+| `workspaceLink` | Postman workspace link (extracts `workspaceId` automatically) |
 | `postmanApiKey` | Postman API key |
 | `postmanBaseUrl` | Value for Postman variable `baseUrl` (`{{baseUrl}}` in URLs) |
 | `reuseExistingCollectionByName` | Reuse workspace collection with same name when no state file (default `true`) |
@@ -111,6 +136,18 @@ Requests managed by this plugin are tagged with `_pman.routeId`. On each sync, s
 ### Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## CLI
+
+The package ships a small `pman` CLI:
+
+```bash
+pman help
+pman clear
+pman support
+```
+
+`pman support` prints the Discord invite: `https://discord.gg/4FBYAMxwdk`.
 
 ## License
 
