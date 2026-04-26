@@ -159,7 +159,7 @@ async function main() {
     postmanApiKey: postman.postmanApiKey,
     workspaceId: postman.workspaceId,
     postmanBaseUrl: publicBase,
-    collectionName: 'Shiftr / pman playground',
+    collectionName: 'pman ~ by st3ix',
   });
 
   await fastify.listen({ port, host: '127.0.0.1' });
