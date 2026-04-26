@@ -33,7 +33,12 @@ export async function runPostmanSync(fastify: FastifyInstance, rt: PmanRuntime):
 
   const openApi = getOpenApiObject(fastify);
   const operations = listOpenApiOperations(openApi);
-  const foldered = attachFolders(operations, resolved.folderStrategy, resolved.folderPathStripPrefix);
+  const foldered = attachFolders(
+    operations,
+    resolved.folderStrategy,
+    resolved.folderPathStripPrefix,
+    resolved.pathFolderNesting,
+  );
   const generated = await openApiToPostmanCollection(openApi);
 
   if (!resolved.postmanApiKey) {

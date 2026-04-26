@@ -2,6 +2,8 @@ import type { FastifyBaseLogger } from 'fastify';
 
 export type FolderStrategy = 'path' | 'tags' | 'hybrid';
 
+export type PathFolderNesting = 'flat' | 'nested';
+
 export type FastifyPmanOptions = {
   workspaceId?: string;
   /** Optional Postman workspace URL. If set, the workspace id is extracted automatically. */
@@ -27,6 +29,8 @@ export type FastifyPmanOptions = {
     variableKey?: string;
   };
   folderStrategy?: FolderStrategy;
+  /** When using `path` / `hybrid` path-based folders, choose single-level or nested subfolders. */
+  pathFolderNesting?: PathFolderNesting;
   folderPathStripPrefix?: string;
   fetchImpl?: typeof fetch;
 };
@@ -40,6 +44,7 @@ export type ResolvedPmanOptions = {
   postmanBaseUrl: string | undefined;
   postmanApiBase: string;
   folderStrategy: FolderStrategy;
+  pathFolderNesting: PathFolderNesting;
   folderPathStripPrefix: string | undefined;
   reuseExistingCollectionByName: boolean;
   autoAuth: boolean;
@@ -116,6 +121,7 @@ export function resolvePmanOptions(opts: FastifyPmanOptions): ResolvedPmanOption
     postmanBaseUrl: firstNonEmpty(opts.postmanBaseUrl, process.env.POSTMAN_BASE_URL),
     postmanApiBase: opts.postmanApiBase?.trim() || 'https://api.getpostman.com',
     folderStrategy: opts.folderStrategy ?? 'path',
+    pathFolderNesting: opts.pathFolderNesting === 'flat' || opts.pathFolderNesting === 'nested' ? opts.pathFolderNesting : 'nested',
     folderPathStripPrefix: opts.folderPathStripPrefix,
     reuseExistingCollectionByName: opts.reuseExistingCollectionByName ?? true,
     autoAuth: opts.autoAuth ?? true,
