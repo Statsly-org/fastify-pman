@@ -7,6 +7,115 @@ function uniqueSorted<T>(values: T[]): T[] {
   return [...new Set(values)].sort((a, b) => String(a).localeCompare(String(b)));
 }
 
+function pathEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+function pathIsPrefixOrEqual(short: string[], long: string[]): boolean {
+  if (short.length > long.length) return false;
+  for (let i = 0; i < short.length; i += 1) {
+    if (short[i] !== long[i]) return false;
+  }
+  return true;
+}
+
+/** Compact key for state.json `managedFolders` (e.g. Auth>User>Admin). */
+export function managedFolderStateKeyForPath(path: string[]): string {
+  return path.filter((s) => s.length > 0).join('>');
+}
+
+function titleCaseSegment(seg: string): string {
+  const s = seg.trim();
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+/**
+ * Keys used to strip prior pman folder trees from the collection.
+ * Includes: state file entries (new `A>B>C` and legacy one-segment) plus
+ * per-route aliases for layouts from older releases (root segment, tag-based folders).
+ */
+function allFolderRemovalKeys(
+  stateKeys: string[] | undefined,
+  routes: FolderedRoute[],
+): string[] {
+  const out = new Set<string>();
+  for (const raw of stateKeys ?? []) {
+    const k = String(raw).trim();
+    if (k) out.add(k);
+  }
+  for (const r of routes) {
+    out.add(managedFolderStateKeyForPath(r.folderPath));
+    const rootSeg = r.folderPath[0] ?? r.folder;
+    if (rootSeg) out.add(rootSeg);
+    const tag0 = r.tags[0];
+    if (typeof tag0 === 'string' && tag0.trim()) {
+      out.add(titleCaseSegment(tag0));
+    }
+  }
+  return uniqueSorted([...out]);
+}
+
+function pathMatchesAnyManagedStateKey(
+  path: string[],
+  statePaths: string[][],
+): boolean {
+  for (const sp of statePaths) {
+    if (pathEqual(path, sp) || pathIsPrefixOrEqual(path, sp) || pathIsPrefixOrEqual(sp, path)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function filterOutStateManagedFolderTrees(
+  items: unknown[] | undefined,
+  stateKeys: string[] | null,
+  parentPath: string[],
+): unknown[] {
+  if (!Array.isArray(items) || !stateKeys || stateKeys.length === 0) {
+    return Array.isArray(items) ? [...(items as unknown[])] : [];
+  }
+  const statePaths = stateKeys.map((k) => k.split('>').filter(Boolean));
+  const out: unknown[] = [];
+  for (const raw of items) {
+    if (!isRecord(raw)) continue;
+    const it = raw as PmItem;
+    if (it.request && isRecord(it.request)) {
+      out.push(it);
+      continue;
+    }
+    if (Array.isArray(it.item)) {
+      const name = typeof it.name === 'string' ? it.name : '';
+      if (!name) {
+        out.push(it);
+        continue;
+      }
+      const herePath = [...parentPath, name];
+      if (pathMatchesAnyManagedStateKey(herePath, statePaths)) {
+        continue;
+      }
+      const pman = it._pman;
+      const isManaged =
+        isRecord(pman) && pman.folderManaged === true
+          ? true
+          : !isRecord(pman) || pman.folderManaged !== false;
+      if (!isManaged) {
+        out.push(it);
+        continue;
+      }
+      const nextChildren = filterOutStateManagedFolderTrees(it.item as unknown[], stateKeys, herePath);
+      if (nextChildren.length === 0) continue;
+      out.push({ ...it, item: nextChildren });
+    }
+  }
+  return out;
+}
+
 function buildCreditsText(): string {
   return [
     'Fastify → Postman sync via @st3ix/pman.',
@@ -199,24 +308,98 @@ function mergeRequest(
   return merged;
 }
 
-function buildFolderItems(
-  itemsByFolder: Map<string, PmItem[]>,
-  opsByFolder: Map<string, FolderedRoute[]>,
-): PmItem[] {
-  const folders = [...itemsByFolder.keys()].sort((a, b) => a.localeCompare(b));
-  const root: PmItem[] = [];
-  for (const name of folders) {
-    const items = itemsByFolder.get(name);
-    if (!items?.length) continue;
-    const ops = opsByFolder.get(name) ?? [];
-    root.push({
-      name,
-      description: ops.length ? buildFolderDescription(name, ops) : buildCreditsText(),
-      _pman: { folderManaged: true },
-      item: items,
-    });
+type RouteGroup = { path: string[]; items: PmItem[]; ops: FolderedRoute[] };
+
+function prefixMatchesPath(prefix: string[], full: string[]): boolean {
+  if (full.length < prefix.length) return false;
+  for (let i = 0; i < prefix.length; i += 1) {
+    if (full[i] !== prefix[i]) return false;
+  }
+  return true;
+}
+
+type FolderTree = {
+  name: string;
+  children: Map<string, FolderTree>;
+  leafItems: PmItem[];
+  leafOps: FolderedRoute[];
+};
+
+function getOrCreateChild(tree: FolderTree, name: string): FolderTree {
+  const existing = tree.children.get(name);
+  if (existing) return existing;
+  const next: FolderTree = { name, children: new Map(), leafItems: [], leafOps: [] };
+  tree.children.set(name, next);
+  return next;
+}
+
+function buildFolderTree(groups: Map<string, RouteGroup>): FolderTree {
+  const root: FolderTree = { name: '', children: new Map(), leafItems: [], leafOps: [] };
+  for (const g of groups.values()) {
+    if (!g.path.length) continue;
+    let cur = root;
+    for (const seg of g.path) {
+      cur = getOrCreateChild(cur, seg);
+    }
+    cur.leafItems.push(...g.items);
+    cur.leafOps.push(...g.ops);
+  }
+
+  // de-dupe by routeId in case the same op got grouped twice (should not happen)
+  for (const t of walkTrees(root)) {
+    if (!t.leafItems.length) continue;
+    const seen = new Set<string>();
+    const items: PmItem[] = [];
+    const ops: FolderedRoute[] = [];
+    for (let i = 0; i < t.leafItems.length; i += 1) {
+      const it = t.leafItems[i];
+      const op = t.leafOps[i];
+      const id = op.routeId;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      items.push(it);
+      ops.push(op);
+    }
+    t.leafItems = items;
+    t.leafOps = ops;
   }
   return root;
+}
+
+function* walkTrees(tree: FolderTree): Generator<FolderTree> {
+  yield tree;
+  for (const c of tree.children.values()) yield* walkTrees(c);
+}
+
+function renderFolderTree(node: FolderTree, allRoutes: FolderedRoute[], prefix: string[]): PmItem[] {
+  const out: PmItem[] = [];
+
+  const childNames = [...node.children.keys()].sort((a, b) => a.localeCompare(b));
+  for (const name of childNames) {
+    const child = node.children.get(name);
+    if (!child) continue;
+
+    const childPrefix = [...prefix, name];
+    const nestedFolders = renderFolderTree(child, allRoutes, childPrefix);
+    const directItems = child.leafItems;
+    const childItems = [...nestedFolders, ...directItems];
+    if (!childItems.length) continue;
+
+    const opsForDesc = allRoutes.filter((r) => prefixMatchesPath(childPrefix, r.folderPath));
+    out.push({
+      name,
+      description: opsForDesc.length ? buildFolderDescription(name, opsForDesc) : buildCreditsText(),
+      _pman: { folderManaged: true },
+      item: childItems,
+    });
+  }
+
+  return out;
+}
+
+function buildFolderItemsFromGroups(groups: Map<string, RouteGroup>, allRoutes: FolderedRoute[]): PmItem[] {
+  const tree = buildFolderTree(groups);
+  return renderFolderTree(tree, allRoutes, []);
 }
 
 function prunePmanManagedItems(items: unknown[] | undefined): unknown[] {
@@ -255,21 +438,18 @@ export function mergeOpenApiIntoPostmanCollection(args: {
 
   const existingByRouteId = indexExistingByRouteId(existing, routeKeyToRouteId);
   const generatedByKey = flattenGeneratedByRouteKey(generated);
-  const byFolder = new Map<string, PmItem[]>();
-  const opsByFolder = new Map<string, FolderedRoute[]>();
+  const byFolder = new Map<string, RouteGroup>();
 
   for (const op of routes) {
     const gen = generatedByKey.get(op.routeKey);
     if (!gen) continue;
     const prev = existingByRouteId.get(op.routeId);
     const merged = mergeRequest(prev, gen, op);
-    const list = byFolder.get(op.folder) ?? [];
-    list.push(merged);
-    byFolder.set(op.folder, list);
-
-    const ops = opsByFolder.get(op.folder) ?? [];
-    ops.push(op);
-    opsByFolder.set(op.folder, ops);
+    const key = op.folderPath.join('>');
+    const cur = byFolder.get(key) ?? { path: op.folderPath, items: [], ops: [] };
+    cur.items.push(merged);
+    cur.ops.push(op);
+    byFolder.set(key, cur);
   }
 
   const out = deepClone(existing) as Record<string, unknown>;
@@ -281,27 +461,17 @@ export function mergeOpenApiIntoPostmanCollection(args: {
     }
   }
   const prevItems = Array.isArray(out.item) ? (out.item as unknown[]) : [];
-  const stateNames = Array.isArray(managedFoldersFromState)
-    ? new Set(managedFoldersFromState.map((x) => String(x)))
-    : null;
-  const withoutStateFolders = stateNames
-    ? prevItems.filter((raw) => {
-        if (!raw || typeof raw !== 'object') return true;
-        const it = raw as Record<string, unknown>;
-        const name = typeof it.name === 'string' ? it.name : '';
-        const isFolder = Array.isArray(it.item);
-        if (isFolder && name && stateNames.has(name)) return false;
-        return true;
-      })
-    : prevItems;
+  const removalKeys = allFolderRemovalKeys(managedFoldersFromState, routes);
+  const withoutStateFolders =
+    removalKeys.length > 0 ? filterOutStateManagedFolderTrees(prevItems, removalKeys, []) : prevItems;
   const kept = prunePmanManagedItems(withoutStateFolders);
-  const fresh = buildFolderItems(byFolder, opsByFolder);
+  const fresh = buildFolderItemsFromGroups(byFolder, routes);
   out.item = [...fresh, ...kept];
   return out;
 }
 
 export function managedFolderNames(routes: FolderedRoute[]): string[] {
-  return uniqueSorted(routes.map((r) => r.folder));
+  return uniqueSorted(routes.map((r) => managedFolderStateKeyForPath(r.folderPath)));
 }
 
 export function shellCollection(name: string): Record<string, unknown> {
