@@ -35,8 +35,11 @@ await app.register(swagger, {
 
 app.get('/users', {
   schema: {
+    // Short Postman item title. Use an OpenAPI extension field because
+    // plain `name` is not emitted into OpenAPI by @fastify/swagger.
+    'x-pman-name': 'List users',
     tags: ['Users'],
-    summary: 'List users',
+    summary: 'List users in the current workspace',
     response: { 200: { type: 'array' } },
   },
 }, async () => []);
@@ -56,6 +59,24 @@ await app.register(pman, {
 
 await app.listen({ port: 3000 });
 ```
+
+### Postman item titles and docs
+
+OpenAPI `summary` strings are often long, but they make poor Postman request titles. Set a short **OpenAPI extension** on the operation to control the Postman item name:
+
+- `schema['x-pman-name']` (recommended)
+- `schema['x-name']` (also supported)
+
+Use `summary` for the first paragraph of the generated Postman “Docs” text.
+
+Postman stores request documentation on the **request** (`item.request.description`) in Collection v2.1; pman writes the same text to `item.description` as well for compatibility.
+
+| Route schema field | How it is used in Postman |
+|--------------------|---------------------------|
+| `x-pman-name` / `x-name` | Request title (short) |
+| `summary` | First paragraph in the item description, followed by auto-generated route metadata |
+
+If `x-pman-name` / `x-name` is omitted, the title falls back to `METHOD <lastPathSegment>` (for example `GET users`).
 
 Pass **`postmanApiKey`** and **`workspaceId`** in the same object as the rest of the plugin options (recommended for apps you control). If either value is omitted or an empty string, the plugin falls back to `POSTMAN_API_KEY` / `POSTMAN_WORKSPACE_ID`.
 
