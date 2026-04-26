@@ -150,6 +150,7 @@ Secrets are never written to the sync state file.
 | `folderStrategy` | `path` (default), `tags`, or `hybrid` — how routes are grouped into Postman folders |
 | `folderPathStripPrefix` | Strip this URL prefix (normalized like OpenAPI) before path segments are used for folders (`path` / `hybrid`) |
 | `pathFolderNesting` | `nested` (default) or `flat` — see [Folder layout in Postman](#folder-layout-in-postman) |
+| `updateCheck` | If `true` (default), check npm for a newer `@st3ix/pman` version on startup and log an update hint |
 | `postmanApiBase` | Override Postman API base URL |
 | `fetchImpl` | Custom `fetch` (for tests) |
 

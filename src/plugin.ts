@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { FastifyPmanOptions } from './options.js';
 import { resolvePmanOptions } from './options.js';
 import { runPostmanSync } from './sync.js';
+import { scheduleUpdateCheck } from './update-check.js';
 
 const pluginImpl: FastifyPluginAsync<FastifyPmanOptions> = async (fastify, opts) => {
   const resolved = resolvePmanOptions(opts);
@@ -11,6 +12,7 @@ const pluginImpl: FastifyPluginAsync<FastifyPmanOptions> = async (fastify, opts)
 
   fastify.addHook('onReady', async () => {
     try {
+      scheduleUpdateCheck({ log, fetchImpl: resolved.fetchImpl, enabled: resolved.updateCheck });
       await runPostmanSync(fastify, rt);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

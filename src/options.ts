@@ -32,6 +32,8 @@ export type FastifyPmanOptions = {
   /** When using `path` / `hybrid` path-based folders, choose single-level or nested subfolders. */
   pathFolderNesting?: PathFolderNesting;
   folderPathStripPrefix?: string;
+  /** If true (default), checks npm for a newer @st3ix/pman version on startup (logs a hint). */
+  updateCheck?: boolean;
   fetchImpl?: typeof fetch;
 };
 
@@ -48,6 +50,7 @@ export type ResolvedPmanOptions = {
   folderPathStripPrefix: string | undefined;
   reuseExistingCollectionByName: boolean;
   autoAuth: boolean;
+  updateCheck: boolean;
   auth:
     | {
         type: 'apiKey' | 'bearer';
@@ -125,6 +128,7 @@ export function resolvePmanOptions(opts: FastifyPmanOptions): ResolvedPmanOption
     folderPathStripPrefix: opts.folderPathStripPrefix,
     reuseExistingCollectionByName: opts.reuseExistingCollectionByName ?? true,
     autoAuth: opts.autoAuth ?? true,
+    updateCheck: opts.updateCheck ?? true,
     auth,
     fetchImpl: opts.fetchImpl ?? globalThis.fetch,
   };
